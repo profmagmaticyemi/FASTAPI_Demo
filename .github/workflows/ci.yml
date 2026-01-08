@@ -1,0 +1,35 @@
+name: CI (Docker Build + Smoke Test)
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  build-and-smoke-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build API image
+        run: docker build -t python-api:ci .
+
+      - name: Run API container
+        run: |
+          docker run -d --name api -p 8000:8000 python-api:ci
+          sleep 3
+
+      - name: Smoke test
+        run: |
+          curl -f http://localhost:8000/
+          curl -f http://localhost:8000/config
+
+      - name: Show logs on failure
+        if: failure()
+        run: docker logs api
+
+      - name: Cleanup
+        if: always()
+        run: docker rm -f api
